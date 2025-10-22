@@ -2,8 +2,8 @@
 "use client";
 
 import React from "react";
-import { TrustPanel } from "@/components/TrustPanel";
-import { TrustBadge, flagTone } from "@/components/TrustBadge";
+import { TrustPanel } from "../../components/TrustPanel";
+import { TrustBadge } from "../../components/TrustBadge";
 
 
 type QARequest = {

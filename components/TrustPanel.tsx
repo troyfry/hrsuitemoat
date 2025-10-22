@@ -1,7 +1,7 @@
 // components/TrustPanel.tsx
 "use client";
 import React from "react";
-import { TrustBadge, flagTone } from "@/components/TrustBadge";
+import { TrustBadge, flagTone } from "./TrustBadge";
 
 function percent(conf: number) {
   const v = Math.max(0, Math.min(1, conf));
