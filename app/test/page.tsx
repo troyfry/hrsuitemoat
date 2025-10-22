@@ -2,6 +2,9 @@
 "use client";
 
 import React from "react";
+import { TrustPanel } from "@/components/TrustPanel";
+import { TrustBadge, flagTone } from "@/components/TrustBadge";
+
 
 type QARequest = {
   state: string;
@@ -243,23 +246,14 @@ export default function TestPage() {
 
         {qaRes && (
           <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Badge tone={qaRes.confidence >= 0.80 ? "good" : qaRes.confidence >= 0.70 ? "warn" : "bad"}>
-                confidence: {qaRes.confidence.toFixed(2)}
-              </Badge>
-              <Badge tone={qaRes.fallback_used ? "warn" : "neutral"}>
-                fallback_used: {String(qaRes.fallback_used)}
-              </Badge>
-              <Badge tone={qaRes.sources_restricted ? "warn" : "neutral"}>
-                sources_restricted: {String(qaRes.sources_restricted)}
-              </Badge>
-              {/* confidence_flags */}
-              {qaRes.confidence_flags?.map((f, i) => (
-                <Badge key={i} tone={flagTone(f)}>
-                  {f}
-                </Badge>
-              ))}
-            </div>
+            <TrustPanel
+  confidence={qaRes.confidence}
+  flags={qaRes.confidence_flags}
+  extras={[
+    { label: "fallback_used", value: qaRes.fallback_used, tone: qaRes.fallback_used ? "warn" : "neutral" },
+    { label: "sources_restricted", value: qaRes.sources_restricted, tone: qaRes.sources_restricted ? "warn" : "neutral" },
+  ]}
+/>
 
             <div className="grid grid-cols-12 gap-4">
               <div className="col-span-12 lg:col-span-7 space-y-2">
@@ -267,6 +261,24 @@ export default function TestPage() {
                 <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
                   {qaRes.answer}
                 </div>
+
+                {/* Inline trust badges under the answer */}
+                    <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+                      {/* flags */}
+                      {qaRes.confidence_flags?.map((f, i) => (
+                        <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
+                          {f}
+                        </TrustBadge>
+                      ))}
+                      {/* extras */}
+                      <TrustBadge tone={qaRes.fallback_used ? "warn" : "neutral"}>
+                        fallback_used: {String(qaRes.fallback_used)}
+                      </TrustBadge>
+                      <TrustBadge tone={qaRes.sources_restricted ? "warn" : "neutral"}>
+                        sources_restricted: {String(qaRes.sources_restricted)}
+                      </TrustBadge>
+                    </div>
+
 
                 <h3 className="font-medium mt-4">Key Points</h3>
                 <ul className="list-disc pl-5 text-sm">
@@ -378,24 +390,15 @@ export default function TestPage() {
 
         {revRes && (
           <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Badge tone={revRes.confidence >= 0.80 ? "good" : revRes.confidence >= 0.70 ? "warn" : "bad"}>
-                confidence: {revRes.confidence.toFixed(2)}
-              </Badge>
-              <Badge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
-                fallback_offered: {revRes.fallback_offered}
-              </Badge>
-              <Badge tone={revRes.soft_fail ? "warn" : "neutral"}>
-                soft_fail: {String(revRes.soft_fail)}
-              </Badge>
-              <Badge tone="neutral">overall_risk: {revRes.overall_risk}</Badge>
-              {/* confidence_flags */}
-              {revRes.confidence_flags?.map((f, i) => (
-                <Badge key={i} tone={flagTone(f)}>
-                  {f}
-                </Badge>
-              ))}
-            </div>
+            <TrustPanel
+  confidence={revRes.confidence}
+  flags={revRes.confidence_flags}
+  extras={[
+    { label: "fallback_offered", value: revRes.fallback_offered, tone: revRes.fallback_offered === "federal" ? "warn" : "neutral" },
+    { label: "soft_fail", value: revRes.soft_fail, tone: revRes.soft_fail ? "warn" : "neutral" },
+    { label: "overall_risk", value: revRes.overall_risk },
+  ]}
+/>
 
             <div className="grid grid-cols-12 gap-4">
               <div className="col-span-12 lg:col-span-7 space-y-2">
@@ -403,6 +406,25 @@ export default function TestPage() {
                 <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
                   {revRes.summary}
                 </div>
+
+                {/* Inline trust badges under the summary */}
+                      <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+                        {/* flags */}
+                        {revRes.confidence_flags?.map((f, i) => (
+                          <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
+                            {f}
+                          </TrustBadge>
+                        ))}
+                        {/* extras */}
+                        <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
+                        <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
+                          soft_fail: {String(revRes.soft_fail)}
+                        </TrustBadge>
+                        <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
+                          fallback_offered: {revRes.fallback_offered}
+                        </TrustBadge>
+                      </div>
+
 
                 <h3 className="font-medium mt-4">Issues</h3>
                 <ul className="space-y-2">

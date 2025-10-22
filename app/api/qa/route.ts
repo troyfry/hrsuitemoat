@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getOpenAIKey, QA_MODEL } from "@/lib/openai";
 import { enforceDomainWhitelist, nowIso, requireDisclaimer } from "@/lib/moat";
 import { QASchemaZ, QASchemaOpenAI } from "@/lib/schemas/qa";
+import { logEvent } from "@/lib/telemetry";
 
 // ─────────────────────────────────────────────────────────────
 // Constants
@@ -381,9 +382,37 @@ export async function POST(req: Request) {
       );
     }
 
+    logEvent({
+      ts: new Date().toISOString(),
+      route: "qa",
+      state,
+      docType: document_type,
+      jurisdiction: result.jurisdiction,
+      confidence: result.confidence,
+      flags: (result as any).confidence_flags,
+      sources_restricted: Boolean(result.sources_restricted),
+      fallback_used: Boolean(result.fallback_used),
+      ok: true,
+    });
+    
+
     return NextResponse.json(result, { status: 200 });
   } catch (e: any) {
     console.error("[/api/qa] error:", e?.stack || e);
+    logEvent({
+      ts: new Date().toISOString(),
+      route: "qa",
+      state: undefined,
+      docType: undefined,
+      jurisdiction: undefined,
+      confidence: undefined,
+      flags: undefined,
+      sources_restricted: undefined,
+      fallback_used: undefined,
+      ok: false,
+      err: e?.message || "QA processing failed",
+    });
+    
     return NextResponse.json(
       { error: e?.message || "QA processing failed" },
       { status: 500 }

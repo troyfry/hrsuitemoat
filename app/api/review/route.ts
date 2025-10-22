@@ -3,6 +3,8 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { ReviewSchemaZ, ReviewSchemaOpenAI } from "@/lib/schemas/review";
+import { logEvent } from "@/lib/telemetry";
+
 
 /* ─────────────────────────────────────────────────────────────
    Evaluative confidence (dynamic) + flags
@@ -289,15 +291,31 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
         { status: 502 }
       );
     }
-
+    
     // Zod validation
     const result = ReviewSchemaZ.safeParse(parsed);
     if (!result.success) {
+      logEvent({
+        ts: new Date().toISOString(),
+        route: "review",
+        state,
+        docType: document_type ?? undefined,
+        jurisdiction: undefined,
+        confidence: undefined,
+        flags: undefined,
+        sources_restricted: undefined,
+        fallback_used: undefined,
+        fallback_offered: undefined,
+        ok: false,
+        err: "Schema validation failed",
+      });
       return NextResponse.json(
         { error: "Schema validation failed", issues: result.error.flatten() },
         { status: 422 }
       );
     }
+
+    
 
     // Whitelist enforcement
     const review = { ...result.data };
@@ -318,6 +336,22 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
         legal_citations: review.legal_citations,
         fallback_offered: "federal",
       });
+
+      logEvent({
+        ts: new Date().toISOString(),
+        route: "review",
+        state,
+        docType: document_type ?? undefined,
+        jurisdiction: undefined,
+        confidence: evalResult.confidence,
+        flags: evalResult.flags,
+        sources_restricted: undefined,
+        fallback_used: undefined,
+        fallback_offered: "federal",
+        ok: true,
+      });
+      
+      
 
       return NextResponse.json(
         {
@@ -361,6 +395,20 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
     );
   } catch (err: any) {
     console.error("[/api/review] error:", err?.stack || err);
+    logEvent({
+      ts: new Date().toISOString(),
+      route: "review",
+      state: undefined,
+      docType: undefined,
+      jurisdiction: undefined,
+      confidence: undefined,
+      flags: undefined,
+      sources_restricted: undefined,
+      fallback_used: undefined,
+      fallback_offered: undefined,
+      ok: false,
+      err: err?.message || "Review processing failed",
+    });
     return NextResponse.json(
       { error: "Unexpected error", details: String(err?.message ?? err) },
       { status: 500 }
