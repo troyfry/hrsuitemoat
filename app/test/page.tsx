@@ -105,6 +105,9 @@ export default function ReviewTestPage() {
       fd.append("state", revState);
       fd.append("document_type", revDocType);
       
+      // Ensure no text field is accidentally included
+      // Only send file, state, and document_type for uploads
+      
       // Debug: Log form data contents
       console.log("Upload form data:");
       for (const [key, value] of fd.entries()) {

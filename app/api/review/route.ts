@@ -189,6 +189,12 @@ export async function POST(req: Request) {
       const form = await req.formData();
       const file = form.get("file");
 
+      // Debug: Log all form data received
+      console.log("API received form data:");
+      for (const [key, value] of form.entries()) {
+        console.log(`${key}:`, value instanceof File ? `File(${value.name})` : value);
+      }
+
       state = String(form.get("state") || "");
       document_type = String(form.get("document_type") || "");
       filename =
@@ -203,6 +209,10 @@ export async function POST(req: Request) {
       try {
         const { extractTextFromFile } = await import("@/lib/extractText");
         const out = await extractTextFromFile(file);
+
+        // Debug: Log extracted text
+        console.log("Extracted text from file:", out.text?.substring(0, 100) + "...");
+        console.log("Text length:", out.text?.length);
 
         // Allow short samples for TXT/HTML; keep higher bar for PDF/DOCX
         const minLen = out.kind === "txt" || out.kind === "html" ? 5 : 20;
