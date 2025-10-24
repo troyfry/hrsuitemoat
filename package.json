@@ -13,6 +13,9 @@
     "mammoth": "^1.11.0",
     "next": "16.0.0",
     "pdf-parse": "^2.4.5",
+    "pdf-poppler": "^0.2.3",
+    "pdf2pic": "^3.2.0",
+    "pdfjs-dist": "^5.4.296",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "zod": "^4.1.12"
