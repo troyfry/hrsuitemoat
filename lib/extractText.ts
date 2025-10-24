@@ -8,12 +8,12 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
   // 1) Try dynamic import (ESM / CJS interoperability)
   try {
     const mod: any = await import("pdf-parse");
-    // pdf-parse exports an object with PDFParse class
-    const PDFParse = mod?.default?.PDFParse ?? mod?.PDFParse ?? mod?.default ?? mod;
-    if (PDFParse && typeof PDFParse === "function") {
+    // pdf-parse exports an object with PDFParse function
+    const pdfParse = mod?.PDFParse ?? mod?.default?.PDFParse ?? mod?.default ?? mod;
+    if (pdfParse && typeof pdfParse === "function") {
       return async (buf: Buffer) => {
-        const parser = new PDFParse({ data: buf });
-        return await parser;
+        const parser = new pdfParse({ data: buf });
+        return await parser.getText();
       };
     }
   } catch {}
@@ -21,11 +21,11 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
   // 2) Fallback to Node CJS require (works with pnpm + Node 22 reliably)
   try {
     const reqAny: any = nodeRequire("pdf-parse");
-    const PDFParse = reqAny?.PDFParse ?? reqAny?.default?.PDFParse ?? reqAny?.default ?? reqAny;
-    if (PDFParse && typeof PDFParse === "function") {
+    const pdfParse = reqAny?.PDFParse ?? reqAny?.default?.PDFParse ?? reqAny?.default ?? reqAny;
+    if (pdfParse && typeof pdfParse === "function") {
       return async (buf: Buffer) => {
-        const parser = new PDFParse({ data: buf });
-        return await parser;
+        const parser = new pdfParse({ data: buf });
+        return await parser.getText();
       };
     }
   } catch {}
