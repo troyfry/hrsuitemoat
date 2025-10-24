@@ -54,10 +54,31 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; k
   else kind = "txt";
 
   if (kind === "pdf") {
-    const pdfParse = await getPdfParseFn();
-    const { text } = await pdfParse(Buffer.from(bytes));
-    if (!text?.trim()) throw new Error("EMPTY_TEXT_FROM_PDF");
-    return { text, kind };
+    try {
+      const pdfParse = await getPdfParseFn();
+      const result = await pdfParse(Buffer.from(bytes));
+      const text = result?.text?.trim() || "";
+      
+      // Debug information
+      console.log("PDF extraction result:", {
+        hasText: !!text,
+        textLength: text.length,
+        resultKeys: Object.keys(result || {}),
+        pages: (result as any)?.numpages || 0
+      });
+      
+      if (!text) {
+        // Provide more helpful error message for scanned PDFs
+        throw new Error("PDF appears to contain scanned images or is not text-extractable. Please try a different PDF or convert to text format.");
+      }
+      
+      return { text, kind };
+    } catch (error: any) {
+      if (error.message.includes("scanned images")) {
+        throw error;
+      }
+      throw new Error(`PDF extraction failed: ${error.message}`);
+    }
   }
 
   if (kind === "docx") {
