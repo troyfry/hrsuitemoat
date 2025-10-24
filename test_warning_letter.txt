@@ -1,0 +1,35 @@
+EMPLOYEE WARNING LETTER
+
+Acme Corporation
+123 Business Street
+San Francisco, CA 94105
+
+Date: December 19, 2024
+
+To: John Doe
+Employee ID: 12345
+Department: Operations
+
+RE: Written Warning - Safety Protocol Violation
+
+Dear Mr. Doe,
+
+This letter serves as a written warning regarding your violation of company safety protocols.
+
+On December 15, 2024, you were observed not wearing the required Personal Protective Equipment (PPE) while working in the chemical handling area. This constitutes a serious violation of our safety policies and California Occupational Safety and Health Administration (Cal/OSHA) regulations.
+
+Specifically, you violated:
+• Cal. Lab. Code § 6400 - General duty to provide safe workplace
+• Cal. Code Regs. Tit. 8 § 3380 - Personal Protective Equipment requirements
+
+This is your first written warning. Future violations may result in further disciplinary action, up to and including termination.
+
+You are required to:
+1. Review the company safety manual
+2. Complete additional safety training
+3. Sign this acknowledgment
+
+Please contact HR if you have any questions.
+
+Sincerely,
+HR Department

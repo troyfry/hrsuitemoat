@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Test PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <h1>Create a Test PDF for HR Suite</h1>
+    <p>This will create a PDF with selectable text that should work with the upload system.</p>
+    
+    <button onclick="createPDF()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Generate Test PDF
+    </button>
+    
+    <div id="status" style="margin-top: 20px;"></div>
+
+    <script>
+        function createPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(20);
+            doc.text('Employee Warning Letter', 20, 30);
+            
+            // Add company info
+            doc.setFontSize(12);
+            doc.text('Acme Corporation', 20, 50);
+            doc.text('123 Business Street', 20, 60);
+            doc.text('San Francisco, CA 94105', 20, 70);
+            
+            // Add date
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 90);
+            
+            // Add employee info
+            doc.text('To: John Doe', 20, 110);
+            doc.text('Employee ID: 12345', 20, 120);
+            doc.text('Department: Operations', 20, 130);
+            
+            // Add warning content
+            doc.setFontSize(14);
+            doc.text('RE: Written Warning - Safety Protocol Violation', 20, 150);
+            
+            doc.setFontSize(12);
+            const warningText = [
+                'Dear Mr. Doe,',
+                '',
+                'This letter serves as a written warning regarding your violation of company safety protocols.',
+                '',
+                'On [Date], you were observed not wearing the required Personal Protective Equipment (PPE)',
+                'while working in the chemical handling area. This constitutes a serious violation of our',
+                'safety policies and California Occupational Safety and Health Administration (Cal/OSHA)',
+                'regulations.',
+                '',
+                'Specifically, you violated:',
+                '• Cal. Lab. Code § 6400 - General duty to provide safe workplace',
+                '• Cal. Code Regs. Tit. 8 § 3380 - Personal Protective Equipment requirements',
+                '',
+                'This is your first written warning. Future violations may result in further',
+                'disciplinary action, up to and including termination.',
+                '',
+                'You are required to:',
+                '1. Review the company safety manual',
+                '2. Complete additional safety training',
+                '3. Sign this acknowledgment',
+                '',
+                'Please contact HR if you have any questions.',
+                '',
+                'Sincerely,',
+                'HR Department'
+            ];
+            
+            let yPosition = 170;
+            warningText.forEach(line => {
+                if (yPosition > 280) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                doc.text(line, 20, yPosition);
+                yPosition += 6;
+            });
+            
+            // Save the PDF
+            doc.save('test_warning_letter.pdf');
+            
+            document.getElementById('status').innerHTML = 
+                '<p style="color: green;">✅ PDF created successfully! Download should start automatically.</p>' +
+                '<p>This PDF contains selectable text and should work with the HR Suite upload system.</p>';
+        }
+    </script>
+</body>
+</html>

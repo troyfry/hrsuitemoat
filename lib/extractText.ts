@@ -12,7 +12,16 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
     const pdfParse = mod?.PDFParse ?? mod?.default?.PDFParse ?? mod?.default ?? mod;
     if (pdfParse && typeof pdfParse === "function") {
       return async (buf: Buffer) => {
-        const parser = new pdfParse({ data: buf });
+        // Configure PDF.js for server-side usage (disable worker)
+        const parser = new pdfParse({ 
+          data: buf,
+          verbosity: 0
+        });
+        
+        // Disable worker for server-side usage
+        if (typeof parser.setWorker === 'function') {
+          parser.setWorker(null);
+        }
         return await parser.getText();
       };
     }
@@ -24,7 +33,16 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
     const pdfParse = reqAny?.PDFParse ?? reqAny?.default?.PDFParse ?? reqAny?.default ?? reqAny;
     if (pdfParse && typeof pdfParse === "function") {
       return async (buf: Buffer) => {
-        const parser = new pdfParse({ data: buf });
+        // Configure PDF.js for server-side usage (disable worker)
+        const parser = new pdfParse({ 
+          data: buf,
+          verbosity: 0
+        });
+        
+        // Disable worker for server-side usage
+        if (typeof parser.setWorker === 'function') {
+          parser.setWorker(null);
+        }
         return await parser.getText();
       };
     }
