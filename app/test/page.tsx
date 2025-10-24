@@ -96,6 +96,9 @@ export default function ReviewTestPage() {
     setUploadLoading(true);
     try {
       const fd = new FormData(e.currentTarget);
+      // Add shared configuration to form data
+      fd.append("state", revState);
+      fd.append("document_type", revDocType);
       const r = await fetch("/api/review", { method: "POST", body: fd });
       const body = await r.json().catch(() => null);
       if (!r.ok) {
@@ -132,38 +135,38 @@ export default function ReviewTestPage() {
     
     return (
       <section className="space-y-4 mt-4">
-        <TrustPanel
+            <TrustPanel
           confidence={revRes.confidence}
           flags={revRes.confidence_flags}
-          extras={[
+  extras={[
             { label: "overall_risk", value: revRes.overall_risk },
             { label: "soft_fail", value: Boolean(revRes.soft_fail), tone: revRes.soft_fail ? "warn" : "neutral" },
             { label: "fallback_offered", value: revRes.fallback_offered ?? "none", tone: revRes.fallback_offered === "federal" ? "warn" : "neutral" },
-          ]}
+  ]}
           title="Trust Assessment — Review"
-        />
+/>
 
-        <div className="grid grid-cols-12 gap-4">
+            <div className="grid grid-cols-12 gap-4">
           <div className="col-span-12 lg:col-span-7 space-y-3">
             <h3 className="font-medium">Summary</h3>
-            <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
+                <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
               {revRes.summary}
-            </div>
+                </div>
 
             {/* Inline trust badges under summary */}
-            <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+                    <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
               {revRes.confidence_flags?.map((f, i) => (
-                <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
-                  {f}
-                </TrustBadge>
-              ))}
+                        <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
+                          {f}
+                        </TrustBadge>
+                      ))}
               <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
               <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
                 soft_fail: {String(revRes.soft_fail)}
-              </TrustBadge>
+                      </TrustBadge>
               <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
                 fallback_offered: {revRes.fallback_offered ?? "none"}
-              </TrustBadge>
+                      </TrustBadge>
             </div>
 
             <div className="mt-2 text-[11px] text-slate-500 italic">
@@ -184,74 +187,103 @@ export default function ReviewTestPage() {
                     </div>
                   ) : null}
                 </li>
-              ))}
-            </ul>
-          </div>
+                  ))}
+                </ul>
+              </div>
 
-          <div className="col-span-12 lg:col-span-5 space-y-3">
+              <div className="col-span-12 lg:col-span-5 space-y-3">
             <h3 className="font-medium">Sources</h3>
-            <ul className="space-y-2">
+                <ul className="space-y-2">
               {revRes.sources.map((s, i) => (
-                <li key={i} className="rounded-lg border bg-white p-3 text-sm">
+                    <li key={i} className="rounded-lg border bg-white p-3 text-sm">
                   <div className="font-medium">{s.citation || s.name}</div>
                   {s.url && (
-                    <a
+                        <a
                       href={s.url}
-                      target="_blank"
-                      className="text-blue-600 hover:underline break-all"
-                    >
+                          target="_blank"
+                          className="text-blue-600 hover:underline break-all"
+                        >
                       {s.url}
-                    </a>
-                  )}
+                        </a>
+                      )}
                   {s.accessed_at && (
                     <div className="text-xs text-slate-500">accessed: {s.accessed_at}</div>
                   )}
-                </li>
-              ))}
-            </ul>
+                    </li>
+                  ))}
+                </ul>
 
-            <h3 className="font-medium mt-4">Disclaimers</h3>
-            <ul className="list-disc pl-5 text-xs text-slate-600">
+                <h3 className="font-medium mt-4">Disclaimers</h3>
+                <ul className="list-disc pl-5 text-xs text-slate-600">
               {revRes.disclaimers.map((d, i) => (
-                <li key={i}>{d}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+                    <li key={i}>{d}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
 
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm text-slate-600">Raw JSON</summary>
-          <pre className="mt-2 rounded-lg border bg-slate-50 p-3 text-xs overflow-auto">
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-slate-600">Raw JSON</summary>
+              <pre className="mt-2 rounded-lg border bg-slate-50 p-3 text-xs overflow-auto">
 {JSON.stringify(revRes, null, 2)}
-          </pre>
-        </details>
+              </pre>
+            </details>
       </section>
     );
   }
 
   return (
-    <main className="mx-auto max-w-5xl p-6 space-y-10">
+    <main className="mx-auto max-w-5xl p-6 space-y-8">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">HR Suite — Review API Test</h1>
         <p className="text-sm text-slate-600">
           Upload a document or paste text. Results show trust signals and compliance findings from <code>/api/review</code>.
         </p>
+        <div className="flex items-center gap-2 mt-3">
+          <Link
+            href="/test-qa"
+            className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm hover:bg-slate-50"
+          >
+            Open QA Test →
+          </Link>
+        </div>
       </header>
-   
-<div className="flex items-center gap-2">
-  <Link
-    href="/test-qa"
-    className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm hover:bg-slate-50"
-  >
-    Open QA Test →
-  </Link>
-</div>
+
+      {/* Shared Configuration */}
+      <section className="rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <h2 className="text-lg font-semibold mb-4">Configuration</h2>
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-12 md:col-span-4">
+            <label className="block text-sm font-medium text-slate-700 mb-2">State</label>
+            <input
+              className="w-full rounded-lg border px-3 py-2"
+              value={revState}
+              onChange={(e) => setRevState(e.target.value)}
+              placeholder="CA"
+            />
+          </div>
+          <div className="col-span-12 md:col-span-8">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Document Type</label>
+            <select
+              className="w-full rounded-lg border px-3 py-2"
+              value={revDocType}
+              onChange={(e) => setRevDocType(e.target.value)}
+            >
+              <option>policy_or_handbook</option>
+              <option>termination_or_warning_letter</option>
+              <option>offer_or_onboarding_letter</option>
+              <option>corrective_action_memo</option>
+              <option>general_hr_correspondence</option>
+            </select>
+          </div>
+        </div>
+      </section>
 
 
-      {/* Upload form */}
+      {/* Upload Section */}
       <section className="rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Upload Document (PDF, DOCX, TXT, HTML)</h2>
+          <h2 className="text-lg font-semibold">Upload Document</h2>
           {uploadCollapsed && (
             <button
               onClick={() => setUploadCollapsed(false)}
@@ -261,36 +293,11 @@ export default function ReviewTestPage() {
             </button>
           )}
         </div>
+        
         {!uploadCollapsed && (
-          <form onSubmit={runReviewUpload} className="space-y-3 bg-slate-50 border rounded-xl p-3">
-          <div className="grid grid-cols-12 gap-3">
-            <div className="col-span-12 md:col-span-3">
-              <label className="block text-xs text-slate-600 mb-1">State</label>
-              <input
-                name="state"
-                className="w-full rounded-lg border px-3 py-2"
-                value={revState}
-                onChange={(e) => setRevState(e.target.value)}
-                required
-              />
-            </div>
-            <div className="col-span-12 md:col-span-5">
-              <label className="block text-xs text-slate-600 mb-1">Document Type</label>
-              <select
-                name="document_type"
-                className="w-full rounded-lg border px-3 py-2"
-                value={revDocType}
-                onChange={(e) => setRevDocType(e.target.value)}
-              >
-                <option>policy_or_handbook</option>
-                <option>termination_or_warning_letter</option>
-                <option>offer_or_onboarding_letter</option>
-                <option>corrective_action_memo</option>
-                <option>general_hr_correspondence</option>
-              </select>
-            </div>
-            <div className="col-span-12 md:col-span-4">
-              <label className="block text-xs text-slate-600 mb-1">File</label>
+          <form onSubmit={runReviewUpload} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">File (PDF, DOCX, TXT, HTML)</label>
               <input
                 name="file"
                 type="file"
@@ -298,9 +305,10 @@ export default function ReviewTestPage() {
                 accept=".pdf,.docx,.txt,.html,.htm"
                 required
               />
+              <p className="text-xs text-slate-500 mt-1">
+                Tip: scanned PDFs need OCR; try DOCX/TXT if you hit an extraction warning.
+              </p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
             <button
               type="submit"
               disabled={uploadLoading}
@@ -308,18 +316,14 @@ export default function ReviewTestPage() {
             >
               {uploadLoading ? "Uploading…" : "Upload & Review"}
             </button>
-            <div className="text-xs text-slate-500">
-              Tip: scanned PDFs need OCR; try DOCX/TXT if you hit an extraction warning.
-            </div>
-          </div>
-        </form>
+          </form>
         )}
         
         {/* Upload Results */}
         {activeMethod === "upload" && <ResultsSection />}
       </section>
 
-      {/* Text form */}
+      {/* Paste Section */}
       <section className="rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Paste Text for Review</h2>
@@ -332,56 +336,35 @@ export default function ReviewTestPage() {
             </button>
           )}
         </div>
+        
         {!pasteCollapsed && (
-          <form onSubmit={runReviewJSON} className="space-y-3">
-          <div className="grid grid-cols-12 gap-3">
-            <div className="col-span-12 md:col-span-3">
-              <label className="block text-xs text-slate-600 mb-1">State</label>
-              <input
-                className="w-full rounded-lg border px-3 py-2"
-                value={revState}
-                onChange={(e) => setRevState(e.target.value)}
-                placeholder="CA"
-                required
-              />
-            </div>
-            <div className="col-span-12 md:col-span-5">
-              <label className="block text-xs text-slate-600 mb-1">Document Type</label>
-              <select
-                className="w-full rounded-lg border px-3 py-2"
-                value={revDocType}
-                onChange={(e) => setRevDocType(e.target.value)}
-              >
-                <option>policy_or_handbook</option>
-                <option>termination_or_warning_letter</option>
-                <option>offer_or_onboarding_letter</option>
-                <option>corrective_action_memo</option>
-                <option>general_hr_correspondence</option>
-              </select>
-            </div>
-            <div className="col-span-12 md:col-span-4">
-              <label className="block text-xs text-slate-600 mb-1">Filename (for logs)</label>
+          <form onSubmit={runReviewJSON} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Filename (for logs)</label>
               <input
                 className="w-full rounded-lg border px-3 py-2"
                 value={revFilename}
                 onChange={(e) => setRevFilename(e.target.value)}
+                placeholder="document.txt"
               />
             </div>
-          </div>
-          <label className="block text-xs text-slate-600 mb-1">Document Text</label>
-          <textarea
-            className="w-full rounded-lg border px-3 py-2 min-h-[120px]"
-            value={revText}
-            onChange={(e) => setRevText(e.target.value)}
-            required
-          />
-          <button
-            type="submit"
-            disabled={revLoading}
-            className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-50"
-          >
-            {revLoading ? "Running…" : "Run Review (Text)"}
-          </button>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Document Text</label>
+            <textarea
+              className="w-full rounded-lg border px-3 py-2 min-h-[120px]"
+              value={revText}
+              onChange={(e) => setRevText(e.target.value)}
+                placeholder="Paste your document text here..."
+              required
+            />
+            </div>
+            <button
+              type="submit"
+              disabled={revLoading}
+              className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-50"
+            >
+              {revLoading ? "Running…" : "Run Review (Text)"}
+            </button>
         </form>
         )}
         
@@ -409,70 +392,70 @@ export default function ReviewTestPage() {
       )}
 
       {/* Results */}
-      {revRes && (
+        {revRes && (
         <section className="space-y-4">
-          <TrustPanel
-            confidence={revRes.confidence}
-            flags={revRes.confidence_flags}
-            extras={[
-              { label: "overall_risk", value: revRes.overall_risk },
+            <TrustPanel
+  confidence={revRes.confidence}
+  flags={revRes.confidence_flags}
+  extras={[
+    { label: "overall_risk", value: revRes.overall_risk },
               { label: "soft_fail", value: Boolean(revRes.soft_fail), tone: revRes.soft_fail ? "warn" : "neutral" },
               { label: "fallback_offered", value: revRes.fallback_offered ?? "none", tone: revRes.fallback_offered === "federal" ? "warn" : "neutral" },
-            ]}
+  ]}
             title="Trust Assessment — Review"
-          />
+/>
 
-          <div className="grid grid-cols-12 gap-4">
+            <div className="grid grid-cols-12 gap-4">
             <div className="col-span-12 lg:col-span-7 space-y-3">
-              <h3 className="font-medium">Summary</h3>
-              <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
-                {revRes.summary}
-              </div>
+                <h3 className="font-medium">Summary</h3>
+                <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
+                  {revRes.summary}
+                </div>
 
               {/* Inline trust badges under summary */}
-              <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
-                {revRes.confidence_flags?.map((f, i) => (
-                  <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
-                    {f}
-                  </TrustBadge>
-                ))}
-                <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
-                <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
-                  soft_fail: {String(revRes.soft_fail)}
-                </TrustBadge>
-                <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
+                      <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+                        {revRes.confidence_flags?.map((f, i) => (
+                          <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
+                            {f}
+                          </TrustBadge>
+                        ))}
+                        <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
+                        <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
+                          soft_fail: {String(revRes.soft_fail)}
+                        </TrustBadge>
+                        <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
                   fallback_offered: {revRes.fallback_offered ?? "none"}
-                </TrustBadge>
-              </div>
+                        </TrustBadge>
+                      </div>
 
               <div className="mt-2 text-[11px] text-slate-500 italic">
                 Powered by State-Of-HR GPT — Not legal advice.
               </div>
 
               <h3 className="font-medium mt-5">Issues</h3>
-              <ul className="space-y-2">
-                {revRes.issues.map((i, idx) => (
-                  <li key={idx} className="rounded-lg border bg-white p-3">
-                    <div className="text-sm font-medium">
-                      {i.title} <span className="text-slate-500">({i.severity})</span>
-                    </div>
-                    <div className="text-sm mt-1">{i.description}</div>
-                    {i.related_statutes?.length ? (
-                      <div className="mt-1 text-xs text-slate-600">
-                        Statutes: {i.related_statutes.join(", ")}
+                <ul className="space-y-2">
+                  {revRes.issues.map((i, idx) => (
+                    <li key={idx} className="rounded-lg border bg-white p-3">
+                      <div className="text-sm font-medium">
+                        {i.title} <span className="text-slate-500">({i.severity})</span>
                       </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                      <div className="text-sm mt-1">{i.description}</div>
+                      {i.related_statutes?.length ? (
+                        <div className="mt-1 text-xs text-slate-600">
+                          Statutes: {i.related_statutes.join(", ")}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            <div className="col-span-12 lg:col-span-5 space-y-3">
-              <h3 className="font-medium">Sources</h3>
-              <ul className="space-y-2">
-                {revRes.sources.map((s, i) => (
-                  <li key={i} className="rounded-lg border bg-white p-3 text-sm">
-                    <div className="font-medium">{s.citation || s.name}</div>
+              <div className="col-span-12 lg:col-span-5 space-y-3">
+                <h3 className="font-medium">Sources</h3>
+                <ul className="space-y-2">
+                  {revRes.sources.map((s, i) => (
+                    <li key={i} className="rounded-lg border bg-white p-3 text-sm">
+                      <div className="font-medium">{s.citation || s.name}</div>
                     {s.url && (
                       <a
                         href={s.url}
@@ -485,27 +468,27 @@ export default function ReviewTestPage() {
                     {s.accessed_at && (
                       <div className="text-xs text-slate-500">accessed: {s.accessed_at}</div>
                     )}
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
 
-              <h3 className="font-medium mt-4">Disclaimers</h3>
-              <ul className="list-disc pl-5 text-xs text-slate-600">
-                {revRes.disclaimers.map((d, i) => (
-                  <li key={i}>{d}</li>
-                ))}
-              </ul>
+                <h3 className="font-medium mt-4">Disclaimers</h3>
+                <ul className="list-disc pl-5 text-xs text-slate-600">
+                  {revRes.disclaimers.map((d, i) => (
+                    <li key={i}>{d}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
-          </div>
 
-          <details className="mt-4">
-            <summary className="cursor-pointer text-sm text-slate-600">Raw JSON</summary>
-            <pre className="mt-2 rounded-lg border bg-slate-50 p-3 text-xs overflow-auto">
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm text-slate-600">Raw JSON</summary>
+              <pre className="mt-2 rounded-lg border bg-slate-50 p-3 text-xs overflow-auto">
 {JSON.stringify(revRes, null, 2)}
-            </pre>
-          </details>
+              </pre>
+            </details>
         </section>
-      )}
+        )}
     </main>
   );
 }
