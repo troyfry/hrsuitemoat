@@ -62,15 +62,20 @@ export default function ReviewTestPage() {
     setUploadCollapsed(true); // Collapse upload section
     setRevLoading(true);
     try {
+      const requestData = {
+        text: revText,
+        state: revState,
+        filename: revFilename,
+        document_type: revDocType,
+      };
+      
+      // Debug: Log paste request data
+      console.log("Paste request data:", requestData);
+      
       const r = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: revText,
-          state: revState,
-          filename: revFilename,
-          document_type: revDocType,
-        }),
+        body: JSON.stringify(requestData),
       });
       const body = await r.json().catch(() => null);
       if (!r.ok) {
@@ -99,6 +104,13 @@ export default function ReviewTestPage() {
       // Add shared configuration to form data
       fd.append("state", revState);
       fd.append("document_type", revDocType);
+      
+      // Debug: Log form data contents
+      console.log("Upload form data:");
+      for (const [key, value] of fd.entries()) {
+        console.log(`${key}:`, value instanceof File ? `File(${value.name})` : value);
+      }
+      
       const r = await fetch("/api/review", { method: "POST", body: fd });
       const body = await r.json().catch(() => null);
       if (!r.ok) {
