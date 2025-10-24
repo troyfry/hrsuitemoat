@@ -5,6 +5,23 @@ const nodeRequire = createRequire(import.meta.url);
 type Kind = "pdf" | "docx" | "txt" | "html";
 
 async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string }>> {
+  // Set up PDF.js to disable workers globally
+  try {
+    // Try to disable PDF.js workers before importing
+    const pdfjsLib = await import("pdfjs-dist");
+    if (pdfjsLib.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+    }
+    
+    // Also try to set worker to null
+    if (pdfjsLib.setWorker) {
+      pdfjsLib.setWorker(null);
+    }
+  } catch {}
+  
+  // Set environment variable to disable workers
+  process.env.PDFJS_DISABLE_WORKER = 'true';
+
   // 1) Try dynamic import (ESM / CJS interoperability)
   try {
     const mod: any = await import("pdf-parse");
@@ -77,7 +94,8 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; k
 
   if (kind === "pdf") {
     try {
-      const pdfParse = await getPdfParseFn();
+      // Try a simpler approach first - use pdf-parse directly without workers
+      const pdfParse = require("pdf-parse");
       const result = await pdfParse(Buffer.from(bytes));
       const text = result?.text?.trim() || "";
       
