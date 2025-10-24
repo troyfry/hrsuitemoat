@@ -151,10 +151,10 @@ export default function ReviewTestPage() {
     return (
       <section className="space-y-4 mt-4">
             <TrustPanel
-          confidence={revRes.confidence}
-          flags={revRes.confidence_flags}
+  confidence={revRes.confidence}
+  flags={revRes.confidence_flags}
   extras={[
-            { label: "overall_risk", value: revRes.overall_risk },
+    { label: "overall_risk", value: revRes.overall_risk },
             { label: "soft_fail", value: Boolean(revRes.soft_fail), tone: revRes.soft_fail ? "warn" : "neutral" },
             { label: "fallback_offered", value: revRes.fallback_offered ?? "none", tone: revRes.fallback_offered === "federal" ? "warn" : "neutral" },
   ]}
@@ -163,66 +163,66 @@ export default function ReviewTestPage() {
 
             <div className="grid grid-cols-12 gap-4">
           <div className="col-span-12 lg:col-span-7 space-y-3">
-            <h3 className="font-medium">Summary</h3>
+                <h3 className="font-medium">Summary</h3>
                 <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
-              {revRes.summary}
+                  {revRes.summary}
                 </div>
 
             {/* Inline trust badges under summary */}
-                    <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
-              {revRes.confidence_flags?.map((f, i) => (
-                        <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
-                          {f}
+                      <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+                        {revRes.confidence_flags?.map((f, i) => (
+                          <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
+                            {f}
+                          </TrustBadge>
+                        ))}
+                        <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
+                        <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
+                          soft_fail: {String(revRes.soft_fail)}
                         </TrustBadge>
-                      ))}
-              <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
-              <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
-                soft_fail: {String(revRes.soft_fail)}
-                      </TrustBadge>
-              <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
+                        <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
                 fallback_offered: {revRes.fallback_offered ?? "none"}
-                      </TrustBadge>
-            </div>
+                        </TrustBadge>
+                      </div>
 
             <div className="mt-2 text-[11px] text-slate-500 italic">
               Powered by State-Of-HR GPT — Not legal advice.
             </div>
 
             <h3 className="font-medium mt-5">Issues</h3>
-            <ul className="space-y-2">
-              {revRes.issues.map((i, idx) => (
-                <li key={idx} className="rounded-lg border bg-white p-3">
-                  <div className="text-sm font-medium">
-                    {i.title} <span className="text-slate-500">({i.severity})</span>
-                  </div>
-                  <div className="text-sm mt-1">{i.description}</div>
-                  {i.related_statutes?.length ? (
-                    <div className="mt-1 text-xs text-slate-600">
-                      Statutes: {i.related_statutes.join(", ")}
-                    </div>
-                  ) : null}
-                </li>
+                <ul className="space-y-2">
+                  {revRes.issues.map((i, idx) => (
+                    <li key={idx} className="rounded-lg border bg-white p-3">
+                      <div className="text-sm font-medium">
+                        {i.title} <span className="text-slate-500">({i.severity})</span>
+                      </div>
+                      <div className="text-sm mt-1">{i.description}</div>
+                      {i.related_statutes?.length ? (
+                        <div className="mt-1 text-xs text-slate-600">
+                          Statutes: {i.related_statutes.join(", ")}
+                        </div>
+                      ) : null}
+                    </li>
                   ))}
                 </ul>
               </div>
 
               <div className="col-span-12 lg:col-span-5 space-y-3">
-            <h3 className="font-medium">Sources</h3>
+                <h3 className="font-medium">Sources</h3>
                 <ul className="space-y-2">
-              {revRes.sources.map((s, i) => (
+                  {revRes.sources.map((s, i) => (
                     <li key={i} className="rounded-lg border bg-white p-3 text-sm">
-                  <div className="font-medium">{s.citation || s.name}</div>
+                      <div className="font-medium">{s.citation || s.name}</div>
                   {s.url && (
-                        <a
-                      href={s.url}
-                          target="_blank"
-                          className="text-blue-600 hover:underline break-all"
-                        >
-                      {s.url}
-                        </a>
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        className="text-blue-600 hover:underline break-all"
+                      >
+                        {s.url}
+                      </a>
                       )}
                   {s.accessed_at && (
-                    <div className="text-xs text-slate-500">accessed: {s.accessed_at}</div>
+                      <div className="text-xs text-slate-500">accessed: {s.accessed_at}</div>
                   )}
                     </li>
                   ))}
@@ -230,7 +230,7 @@ export default function ReviewTestPage() {
 
                 <h3 className="font-medium mt-4">Disclaimers</h3>
                 <ul className="list-disc pl-5 text-xs text-slate-600">
-              {revRes.disclaimers.map((d, i) => (
+                  {revRes.disclaimers.map((d, i) => (
                     <li key={i}>{d}</li>
                   ))}
                 </ul>
@@ -421,104 +421,6 @@ export default function ReviewTestPage() {
         </div>
       )}
 
-      {/* Results */}
-        {revRes && (
-        <section className="space-y-4">
-            <TrustPanel
-  confidence={revRes.confidence}
-  flags={revRes.confidence_flags}
-  extras={[
-    { label: "overall_risk", value: revRes.overall_risk },
-              { label: "soft_fail", value: Boolean(revRes.soft_fail), tone: revRes.soft_fail ? "warn" : "neutral" },
-              { label: "fallback_offered", value: revRes.fallback_offered ?? "none", tone: revRes.fallback_offered === "federal" ? "warn" : "neutral" },
-  ]}
-            title="Trust Assessment — Review"
-/>
-
-            <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-12 lg:col-span-7 space-y-3">
-                <h3 className="font-medium">Summary</h3>
-                <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
-                  {revRes.summary}
-                </div>
-
-              {/* Inline trust badges under summary */}
-                      <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
-                        {revRes.confidence_flags?.map((f, i) => (
-                          <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
-                            {f}
-                          </TrustBadge>
-                        ))}
-                        <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
-                        <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
-                          soft_fail: {String(revRes.soft_fail)}
-                        </TrustBadge>
-                        <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
-                  fallback_offered: {revRes.fallback_offered ?? "none"}
-                        </TrustBadge>
-                      </div>
-
-              <div className="mt-2 text-[11px] text-slate-500 italic">
-                Powered by State-Of-HR GPT — Not legal advice.
-              </div>
-
-              <h3 className="font-medium mt-5">Issues</h3>
-                <ul className="space-y-2">
-                  {revRes.issues.map((i, idx) => (
-                    <li key={idx} className="rounded-lg border bg-white p-3">
-                      <div className="text-sm font-medium">
-                        {i.title} <span className="text-slate-500">({i.severity})</span>
-                      </div>
-                      <div className="text-sm mt-1">{i.description}</div>
-                      {i.related_statutes?.length ? (
-                        <div className="mt-1 text-xs text-slate-600">
-                          Statutes: {i.related_statutes.join(", ")}
-                        </div>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="col-span-12 lg:col-span-5 space-y-3">
-                <h3 className="font-medium">Sources</h3>
-                <ul className="space-y-2">
-                  {revRes.sources.map((s, i) => (
-                    <li key={i} className="rounded-lg border bg-white p-3 text-sm">
-                      <div className="font-medium">{s.citation || s.name}</div>
-                    {s.url && (
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        className="text-blue-600 hover:underline break-all"
-                      >
-                        {s.url}
-                      </a>
-                    )}
-                    {s.accessed_at && (
-                      <div className="text-xs text-slate-500">accessed: {s.accessed_at}</div>
-                    )}
-                    </li>
-                  ))}
-                </ul>
-
-                <h3 className="font-medium mt-4">Disclaimers</h3>
-                <ul className="list-disc pl-5 text-xs text-slate-600">
-                  {revRes.disclaimers.map((d, i) => (
-                    <li key={i}>{d}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-slate-600">Raw JSON</summary>
-              <pre className="mt-2 rounded-lg border bg-slate-50 p-3 text-xs overflow-auto">
-{JSON.stringify(revRes, null, 2)}
-              </pre>
-            </details>
-        </section>
-        )}
     </main>
   );
 }
