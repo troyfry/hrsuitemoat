@@ -48,12 +48,18 @@ export default function ReviewTestPage() {
   const [revLoading, setRevLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [activeMethod, setActiveMethod] = useState<"upload" | "paste" | null>(null);
+  const [uploadCollapsed, setUploadCollapsed] = useState(false);
+  const [pasteCollapsed, setPasteCollapsed] = useState(false);
 
   // ---- handlers ----
   async function runReviewJSON(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setRevErr(null);
     setRevRes(null);
+    setActiveMethod("paste");
+    setUploadCollapsed(true); // Collapse upload section
+    setPasteCollapsed(false); // Show paste section
     setRevLoading(true);
     try {
       const r = await fetch("/api/review", {
@@ -84,6 +90,9 @@ export default function ReviewTestPage() {
     e.preventDefault();
     setRevErr(null);
     setRevRes(null);
+    setActiveMethod("upload");
+    setPasteCollapsed(true); // Collapse paste section
+    setUploadCollapsed(false); // Show upload section
     setUploadLoading(true);
     try {
       const fd = new FormData(e.currentTarget);
@@ -117,6 +126,109 @@ export default function ReviewTestPage() {
     }
   }
 
+  // Results component
+  function ResultsSection() {
+    if (!revRes) return null;
+    
+    return (
+      <section className="space-y-4 mt-4">
+        <TrustPanel
+          confidence={revRes.confidence}
+          flags={revRes.confidence_flags}
+          extras={[
+            { label: "overall_risk", value: revRes.overall_risk },
+            { label: "soft_fail", value: Boolean(revRes.soft_fail), tone: revRes.soft_fail ? "warn" : "neutral" },
+            { label: "fallback_offered", value: revRes.fallback_offered ?? "none", tone: revRes.fallback_offered === "federal" ? "warn" : "neutral" },
+          ]}
+          title="Trust Assessment — Review"
+        />
+
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-12 lg:col-span-7 space-y-3">
+            <h3 className="font-medium">Summary</h3>
+            <div className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap">
+              {revRes.summary}
+            </div>
+
+            {/* Inline trust badges under summary */}
+            <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+              {revRes.confidence_flags?.map((f, i) => (
+                <TrustBadge key={i} tone={flagTone(f)} title={`signal: ${f}`}>
+                  {f}
+                </TrustBadge>
+              ))}
+              <TrustBadge tone="neutral">overall_risk: {revRes.overall_risk}</TrustBadge>
+              <TrustBadge tone={revRes.soft_fail ? "warn" : "neutral"}>
+                soft_fail: {String(revRes.soft_fail)}
+              </TrustBadge>
+              <TrustBadge tone={revRes.fallback_offered === "federal" ? "warn" : "neutral"}>
+                fallback_offered: {revRes.fallback_offered ?? "none"}
+              </TrustBadge>
+            </div>
+
+            <div className="mt-2 text-[11px] text-slate-500 italic">
+              Powered by State-Of-HR GPT — Not legal advice.
+            </div>
+
+            <h3 className="font-medium mt-5">Issues</h3>
+            <ul className="space-y-2">
+              {revRes.issues.map((i, idx) => (
+                <li key={idx} className="rounded-lg border bg-white p-3">
+                  <div className="text-sm font-medium">
+                    {i.title} <span className="text-slate-500">({i.severity})</span>
+                  </div>
+                  <div className="text-sm mt-1">{i.description}</div>
+                  {i.related_statutes?.length ? (
+                    <div className="mt-1 text-xs text-slate-600">
+                      Statutes: {i.related_statutes.join(", ")}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="col-span-12 lg:col-span-5 space-y-3">
+            <h3 className="font-medium">Sources</h3>
+            <ul className="space-y-2">
+              {revRes.sources.map((s, i) => (
+                <li key={i} className="rounded-lg border bg-white p-3 text-sm">
+                  <div className="font-medium">{s.citation || s.name}</div>
+                  {s.url && (
+                    <a
+                      href={s.url}
+                      target="_blank"
+                      className="text-blue-600 hover:underline break-all"
+                    >
+                      {s.url}
+                    </a>
+                  )}
+                  {s.accessed_at && (
+                    <div className="text-xs text-slate-500">accessed: {s.accessed_at}</div>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            <h3 className="font-medium mt-4">Disclaimers</h3>
+            <ul className="list-disc pl-5 text-xs text-slate-600">
+              {revRes.disclaimers.map((d, i) => (
+                <li key={i}>{d}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-slate-600">Raw JSON</summary>
+          <pre className="mt-2 rounded-lg border bg-slate-50 p-3 text-xs overflow-auto">
+{JSON.stringify(revRes, null, 2)}
+          </pre>
+        </details>
+      </section>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-10">
       <header className="space-y-1">
@@ -138,8 +250,19 @@ export default function ReviewTestPage() {
 
       {/* Upload form */}
       <section className="rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold">Upload Document (PDF, DOCX, TXT, HTML)</h2>
-        <form onSubmit={runReviewUpload} className="space-y-3 bg-slate-50 border rounded-xl p-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Upload Document (PDF, DOCX, TXT, HTML)</h2>
+          {uploadCollapsed && (
+            <button
+              onClick={() => setUploadCollapsed(false)}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Show Upload Form
+            </button>
+          )}
+        </div>
+        {!uploadCollapsed && (
+          <form onSubmit={runReviewUpload} className="space-y-3 bg-slate-50 border rounded-xl p-3">
           <div className="grid grid-cols-12 gap-3">
             <div className="col-span-12 md:col-span-3">
               <label className="block text-xs text-slate-600 mb-1">State</label>
@@ -190,12 +313,27 @@ export default function ReviewTestPage() {
             </div>
           </div>
         </form>
+        )}
+        
+        {/* Upload Results */}
+        {activeMethod === "upload" && <ResultsSection />}
       </section>
 
       {/* Text form */}
       <section className="rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold">Paste Text for Review</h2>
-        <form onSubmit={runReviewJSON} className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Paste Text for Review</h2>
+          {pasteCollapsed && (
+            <button
+              onClick={() => setPasteCollapsed(false)}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Show Text Form
+            </button>
+          )}
+        </div>
+        {!pasteCollapsed && (
+          <form onSubmit={runReviewJSON} className="space-y-3">
           <div className="grid grid-cols-12 gap-3">
             <div className="col-span-12 md:col-span-3">
               <label className="block text-xs text-slate-600 mb-1">State</label>
@@ -245,6 +383,10 @@ export default function ReviewTestPage() {
             {revLoading ? "Running…" : "Run Review (Text)"}
           </button>
         </form>
+        )}
+        
+        {/* Text Results */}
+        {activeMethod === "paste" && <ResultsSection />}
       </section>
 
       {/* Recommendations Button */}
