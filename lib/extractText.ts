@@ -15,7 +15,9 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
         // Configure PDF.js for server-side usage (disable worker)
         const parser = new pdfParse({ 
           data: buf,
-          verbosity: 0
+          verbosity: 0,
+          // Use server-side rendering without workers
+          render_page: false
         });
         
         // Disable worker for server-side usage
@@ -36,7 +38,9 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
         // Configure PDF.js for server-side usage (disable worker)
         const parser = new pdfParse({ 
           data: buf,
-          verbosity: 0
+          verbosity: 0,
+          // Use server-side rendering without workers
+          render_page: false
         });
         
         // Disable worker for server-side usage

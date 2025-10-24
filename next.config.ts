@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Turbopack configuration
+  turbopack: {},
+  
+  // Webpack configuration (only for webpack builds)
   webpack: (config, { isServer }) => {
     // Handle PDF.js worker files
     if (!isServer) {
@@ -20,6 +24,7 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+  
   // Ensure PDF.js worker files are served correctly
   async headers() {
     return [
