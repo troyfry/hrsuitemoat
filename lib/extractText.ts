@@ -4,13 +4,8 @@ const nodeRequire = createRequire(import.meta.url);
 
 type Kind = "pdf" | "docx" | "txt" | "html";
 
-// Use pdf-parse with a simpler approach to avoid worker issues
-let pdfParse: any = null;
-try {
-  pdfParse = require("pdf-parse");
-} catch (e) {
-  // Will be handled in the function
-}
+// For now, disable PDF parsing to avoid worker issues
+// TODO: Implement proper PDF parsing without workers
 
 function magic(bytes: Uint8Array) {
   const h4 = Buffer.from(bytes.slice(0, 4)).toString("hex");
@@ -33,38 +28,8 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; k
   else kind = "txt";
 
   if (kind === "pdf") {
-    try {
-      if (!pdfParse) {
-        throw new Error("pdf-parse module not available");
-      }
-      
-      // Use pdf-parse PDFParse class with minimal configuration
-      const PDFParse = pdfParse.PDFParse;
-      const parser = new PDFParse({ data: Buffer.from(bytes) });
-      const result = await parser.getText();
-      
-      const text = result?.text?.trim() || "";
-      
-      // Debug information
-      console.log("PDF extraction result:", {
-        hasText: !!text,
-        textLength: text.length,
-        resultKeys: Object.keys(result || {}),
-        pages: (result as any)?.numpages || 0
-      });
-      
-      if (!text) {
-        // Provide more helpful error message for scanned PDFs
-        throw new Error("PDF appears to contain scanned images or is not text-extractable. Please try a different PDF or convert to text format.");
-      }
-      
-      return { text, kind };
-    } catch (error: any) {
-      if (error.message.includes("scanned images")) {
-        throw error;
-      }
-      throw new Error(`PDF extraction failed: ${error.message}`);
-    }
+    // Temporarily disable PDF parsing due to worker issues
+    throw new Error("PDF parsing is temporarily disabled due to worker compatibility issues. Please convert your PDF to DOCX, TXT, or HTML format and try again. You can use online converters or tools like Adobe Acrobat to export your PDF as a text-based format.");
   }
 
   if (kind === "docx") {
