@@ -4,10 +4,10 @@ const nodeRequire = createRequire(import.meta.url);
 
 type Kind = "pdf" | "docx" | "txt" | "html";
 
-// Import pdfjs-dist directly to avoid pdf-parse worker issues
-let pdfjsLib: any = null;
+// Use pdf-parse with a simpler approach to avoid worker issues
+let pdfParse: any = null;
 try {
-  pdfjsLib = require("pdfjs-dist");
+  pdfParse = require("pdf-parse");
 } catch (e) {
   // Will be handled in the function
 }
@@ -34,47 +34,31 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; k
 
   if (kind === "pdf") {
     try {
-      if (!pdfjsLib) {
-        throw new Error("pdfjs-dist module not available");
+      if (!pdfParse) {
+        throw new Error("pdf-parse module not available");
       }
       
-      // Disable workers for server-side usage
-      pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+      // Use pdf-parse PDFParse class with minimal configuration
+      const PDFParse = pdfParse.PDFParse;
+      const parser = new PDFParse({ data: Buffer.from(bytes) });
+      const result = await parser.getText();
       
-      // Load the PDF document
-      const loadingTask = pdfjsLib.getDocument({
-        data: Buffer.from(bytes),
-        verbosity: 0
-      });
-      
-      const pdf = await loadingTask.promise;
-      let text = "";
-      
-      // Extract text from all pages
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(" ");
-        text += pageText + "\n";
-      }
-      
-      const trimmedText = text.trim();
+      const text = result?.text?.trim() || "";
       
       // Debug information
       console.log("PDF extraction result:", {
-        hasText: !!trimmedText,
-        textLength: trimmedText.length,
-        pages: pdf.numPages
+        hasText: !!text,
+        textLength: text.length,
+        resultKeys: Object.keys(result || {}),
+        pages: (result as any)?.numpages || 0
       });
       
-      if (!trimmedText) {
+      if (!text) {
         // Provide more helpful error message for scanned PDFs
         throw new Error("PDF appears to contain scanned images or is not text-extractable. Please try a different PDF or convert to text format.");
       }
       
-      return { text: trimmedText, kind };
+      return { text, kind };
     } catch (error: any) {
       if (error.message.includes("scanned images")) {
         throw error;
