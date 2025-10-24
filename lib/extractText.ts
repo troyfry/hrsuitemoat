@@ -4,7 +4,13 @@ const nodeRequire = createRequire(import.meta.url);
 
 type Kind = "pdf" | "docx" | "txt" | "html";
 
-// This function is no longer needed since we're using direct pdf-parse import
+// Import pdf-parse statically to avoid dynamic import issues
+let pdfParse: any = null;
+try {
+  pdfParse = require("pdf-parse");
+} catch (e) {
+  // Will be handled in the function
+}
 
 function magic(bytes: Uint8Array) {
   const h4 = Buffer.from(bytes.slice(0, 4)).toString("hex");
@@ -28,8 +34,10 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; k
 
   if (kind === "pdf") {
     try {
-      // Try a simpler approach first - use pdf-parse directly without workers
-      const pdfParse = require("pdf-parse");
+      if (!pdfParse) {
+        throw new Error("pdf-parse module not available");
+      }
+      
       const PDFParse = pdfParse.PDFParse;
       const parser = new PDFParse({ data: Buffer.from(bytes) });
       const result = await parser.getText();
