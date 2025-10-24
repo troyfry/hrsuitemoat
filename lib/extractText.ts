@@ -4,73 +4,7 @@ const nodeRequire = createRequire(import.meta.url);
 
 type Kind = "pdf" | "docx" | "txt" | "html";
 
-async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string }>> {
-  // Set up PDF.js to disable workers globally
-  try {
-    // Try to disable PDF.js workers before importing
-    const pdfjsLib = await import("pdfjs-dist");
-    if (pdfjsLib.GlobalWorkerOptions) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = null;
-    }
-    
-    // Also try to set worker to null
-    if (pdfjsLib.setWorker) {
-      pdfjsLib.setWorker(null);
-    }
-  } catch {}
-  
-  // Set environment variable to disable workers
-  process.env.PDFJS_DISABLE_WORKER = 'true';
-
-  // 1) Try dynamic import (ESM / CJS interoperability)
-  try {
-    const mod: any = await import("pdf-parse");
-    // pdf-parse exports an object with PDFParse function
-    const pdfParse = mod?.PDFParse ?? mod?.default?.PDFParse ?? mod?.default ?? mod;
-    if (pdfParse && typeof pdfParse === "function") {
-      return async (buf: Buffer) => {
-        // Configure PDF.js for server-side usage (disable worker)
-        const parser = new pdfParse({ 
-          data: buf,
-          verbosity: 0,
-          // Use server-side rendering without workers
-          render_page: false
-        });
-        
-        // Disable worker for server-side usage
-        if (typeof parser.setWorker === 'function') {
-          parser.setWorker(null);
-        }
-        return await parser.getText();
-      };
-    }
-  } catch {}
-
-  // 2) Fallback to Node CJS require (works with pnpm + Node 22 reliably)
-  try {
-    const reqAny: any = nodeRequire("pdf-parse");
-    const pdfParse = reqAny?.PDFParse ?? reqAny?.default?.PDFParse ?? reqAny?.default ?? reqAny;
-    if (pdfParse && typeof pdfParse === "function") {
-      return async (buf: Buffer) => {
-        // Configure PDF.js for server-side usage (disable worker)
-        const parser = new pdfParse({ 
-          data: buf,
-          verbosity: 0,
-          // Use server-side rendering without workers
-          render_page: false
-        });
-        
-        // Disable worker for server-side usage
-        if (typeof parser.setWorker === 'function') {
-          parser.setWorker(null);
-        }
-        return await parser.getText();
-      };
-    }
-  } catch {}
-
-  throw new Error("pdf-parse module did not export a function");
-}
+// This function is no longer needed since we're using direct pdf-parse import
 
 function magic(bytes: Uint8Array) {
   const h4 = Buffer.from(bytes.slice(0, 4)).toString("hex");
@@ -96,7 +30,9 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; k
     try {
       // Try a simpler approach first - use pdf-parse directly without workers
       const pdfParse = require("pdf-parse");
-      const result = await pdfParse(Buffer.from(bytes));
+      const PDFParse = pdfParse.PDFParse;
+      const parser = new PDFParse({ data: Buffer.from(bytes) });
+      const result = await parser.getText();
       const text = result?.text?.trim() || "";
       
       // Debug information
