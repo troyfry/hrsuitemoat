@@ -12,7 +12,7 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
     const PDFParse = mod?.default?.PDFParse ?? mod?.PDFParse ?? mod?.default ?? mod;
     if (PDFParse && typeof PDFParse === "function") {
       return async (buf: Buffer) => {
-        const parser = new PDFParse(buf);
+        const parser = new PDFParse({ data: buf });
         return await parser;
       };
     }
@@ -24,7 +24,7 @@ async function getPdfParseFn(): Promise<(buf: Buffer) => Promise<{ text: string 
     const PDFParse = reqAny?.PDFParse ?? reqAny?.default?.PDFParse ?? reqAny?.default ?? reqAny;
     if (PDFParse && typeof PDFParse === "function") {
       return async (buf: Buffer) => {
-        const parser = new PDFParse(buf);
+        const parser = new PDFParse({ data: buf });
         return await parser;
       };
     }
