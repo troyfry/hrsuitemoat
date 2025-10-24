@@ -50,7 +50,8 @@ export default function ReviewTestPage() {
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [activeMethod, setActiveMethod] = useState<"upload" | "paste" | null>(null);
   const [uploadCollapsed, setUploadCollapsed] = useState(false);
-  const [pasteCollapsed, setPasteCollapsed] = useState(false);
+  const [pasteCollapsed, setPasteCollapsed] = useState(true); // Start collapsed
+  const [showPasteForm, setShowPasteForm] = useState(false);
 
   // ---- handlers ----
   async function runReviewJSON(e: React.FormEvent<HTMLFormElement>) {
@@ -59,7 +60,6 @@ export default function ReviewTestPage() {
     setRevRes(null);
     setActiveMethod("paste");
     setUploadCollapsed(true); // Collapse upload section
-    setPasteCollapsed(false); // Show paste section
     setRevLoading(true);
     try {
       const r = await fetch("/api/review", {
@@ -91,7 +91,7 @@ export default function ReviewTestPage() {
     setRevErr(null);
     setRevRes(null);
     setActiveMethod("upload");
-    setPasteCollapsed(true); // Collapse paste section
+    setShowPasteForm(false); // Hide paste form
     setUploadCollapsed(false); // Show upload section
     setUploadLoading(true);
     try {
@@ -309,13 +309,26 @@ export default function ReviewTestPage() {
                 Tip: scanned PDFs need OCR; try DOCX/TXT if you hit an extraction warning.
               </p>
             </div>
-            <button
-              type="submit"
-              disabled={uploadLoading}
-              className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-50"
-            >
-              {uploadLoading ? "Uploading…" : "Upload & Review"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={uploadLoading}
+                className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-50"
+              >
+                {uploadLoading ? "Uploading…" : "Upload & Review"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasteForm(true);
+                  setPasteCollapsed(false);
+                  setUploadCollapsed(true);
+                }}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Rather paste text instead →
+              </button>
+            </div>
           </form>
         )}
         
@@ -323,21 +336,23 @@ export default function ReviewTestPage() {
         {activeMethod === "upload" && <ResultsSection />}
       </section>
 
-      {/* Paste Section */}
-      <section className="rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Paste Text for Review</h2>
-          {pasteCollapsed && (
+      {/* Paste Section - Only show when requested */}
+      {showPasteForm && (
+        <section className="rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Paste Text for Review</h2>
             <button
-              onClick={() => setPasteCollapsed(false)}
+              onClick={() => {
+                setShowPasteForm(false);
+                setPasteCollapsed(true);
+                setUploadCollapsed(false);
+              }}
               className="text-sm text-blue-600 hover:underline"
             >
-              Show Text Form
+              ← Back to Upload
             </button>
-          )}
-        </div>
-        
-        {!pasteCollapsed && (
+          </div>
+          
           <form onSubmit={runReviewJSON} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Filename (for logs)</label>
@@ -350,13 +365,13 @@ export default function ReviewTestPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Document Text</label>
-            <textarea
-              className="w-full rounded-lg border px-3 py-2 min-h-[120px]"
-              value={revText}
-              onChange={(e) => setRevText(e.target.value)}
+              <textarea
+                className="w-full rounded-lg border px-3 py-2 min-h-[120px]"
+                value={revText}
+                onChange={(e) => setRevText(e.target.value)}
                 placeholder="Paste your document text here..."
-              required
-            />
+                required
+              />
             </div>
             <button
               type="submit"
@@ -365,12 +380,12 @@ export default function ReviewTestPage() {
             >
               {revLoading ? "Running…" : "Run Review (Text)"}
             </button>
-        </form>
-        )}
-        
-        {/* Text Results */}
-        {activeMethod === "paste" && <ResultsSection />}
-      </section>
+          </form>
+          
+          {/* Text Results */}
+          {activeMethod === "paste" && <ResultsSection />}
+        </section>
+      )}
 
       {/* Recommendations Button */}
       <section className="rounded-2xl border border-slate-200 p-5 shadow-sm">
