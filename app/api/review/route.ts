@@ -3,133 +3,35 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { ReviewSchemaZ, ReviewSchemaOpenAI } from "@/lib/schemas/review";
-import { logEvent } from "@/lib/telemetry";
+import { auditEvent } from "@/lib/audit";
 
-
-/* ─────────────────────────────────────────────────────────────
-   Evaluative confidence (dynamic) + flags
-   ──────────────────────────────────────────────────────────── */
-type RFlag =
-  | "nuance"
-  | "fallback"
-  | "thin_citations"
-  | "non_authoritative"
-  | "authoritative_sources"
-  | "multiple_authoritative"
-  | "none";
-
-function textHasNuance(s?: string) {
-  const t = (s || "").toLowerCase();
-  return (
-    t.includes("best practice") ||
-    t.includes("not strictly mandated") ||
-    t.includes("may be required") ||
-    t.includes("depends on") ||
-    t.includes("context-specific") ||
-    t.includes("generally required") ||
-    t.includes("recommended")
-  );
-}
-
-function isPrimaryGovUrl(u?: string) {
-  if (!u) return false;
-  return /(\.gov(?:\.[a-z]{2})?|\.ca\.gov|\.us)(\/|$)/i.test(u);
-}
-
-function hasStatuteLike(s?: string) {
-  return /\b(§|cfr|code|stat\.|lab\.|u\.s\.c\.)\b/i.test(String(s || ""));
-}
-
-function evaluateConfidenceReview(review: {
-  confidence: number;
-  summary?: string;
-  issues?: Array<{ description?: string }>;
-  sources?: Array<{ url?: string; citation?: string }>;
-  legal_citations?: string[];
-  fallback_offered?: "federal" | "none";
-}) {
-  const flags: RFlag[] = [];
-  let score = Math.min(Math.max(review.confidence ?? 0, 0), 1);
-
-  const nuanced =
-    textHasNuance(review.summary) ||
-    (Array.isArray(review.issues) &&
-      review.issues.some((i) => textHasNuance(i?.description)));
-
-  const sources = Array.isArray(review.sources) ? review.sources : [];
-  const thin = sources.length < 2;
-
-  const anyPrimary = sources.some((s) => isPrimaryGovUrl(s?.url));
-  const statuteFromSources = sources.some((s) => hasStatuteLike(s?.citation));
-  const statuteFromList = (review.legal_citations || []).some((c) =>
-    hasStatuteLike(c)
-  );
-  const anyAuthoritative = anyPrimary || statuteFromSources || statuteFromList;
-  const multiAuthoritative =
-    sources.filter((s) => isPrimaryGovUrl(s?.url) || hasStatuteLike(s?.citation))
-      .length >= 2;
-
-  // Bonuses
-  if (multiAuthoritative) {
-    score += 0.10;
-    flags.push("multiple_authoritative");
-  } else if (anyAuthoritative) {
-    score += 0.05;
-    flags.push("authoritative_sources");
-  }
-
-  // Penalties
-  if (review.fallback_offered === "federal") {
-    score -= 0.08;
-    flags.push("fallback");
-  }
-  if (thin && !anyAuthoritative) {
-    score -= 0.06;
-    flags.push("thin_citations");
-  }
-  if (!anyAuthoritative) {
-    score -= 0.05;
-    flags.push("non_authoritative");
-  }
-  if (nuanced) {
-    score -= 0.06;
-    flags.push("nuance");
-  }
-
-  const FINAL_MIN = 0.55;
-  const FINAL_MAX = 0.95;
-  score = Math.max(FINAL_MIN, Math.min(FINAL_MAX, score));
-
-  if (flags.length === 0) flags.push("none");
-  return { confidence: Number(score.toFixed(2)), flags };
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Models & Env
-   ──────────────────────────────────────────────────────────── */
+/* -------------------------------------------
+   Model / Env
+------------------------------------------- */
 const MODEL =
   process.env.OPENAI_REVIEW_MODEL ||
   process.env.OPENAI_QA_MODEL ||
   "gpt-4o-mini";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY as string | undefined;
 
-/* ─────────────────────────────────────────────────────────────
-   Trusted domains (whitelist)
-   ──────────────────────────────────────────────────────────── */
+/* -------------------------------------------
+   Domain allow-list (whitelist)
+------------------------------------------- */
 const DEFAULT_DOMAINS = [
   "dol.gov",
   "eeoc.gov",
+  "oag.ca.gov",
   "dir.ca.gov",
-  "law.cornell.edu",
-  "ohr.dc.gov",
-  "illinois.gov",
-  "leg.state.fl.us",
+  "lni.wa.gov",
   "ny.gov",
   "mass.gov",
   "azleg.gov",
   "capitol.texas.gov",
   "twc.texas.gov",
-  "lni.wa.gov",
+  "law.cornell.edu",
+  "ohr.dc.gov",
+  "illinois.gov",
+  "leg.state.fl.us",
 ];
 
 const ALLOWED_DOMAINS: string[] = (
@@ -147,14 +49,12 @@ function hostnameFromUrl(url: string): string | null {
     return null;
   }
 }
-
 function domainAllowed(domain: string): boolean {
   const d = domain.toLowerCase();
   return ALLOWED_DOMAINS.some(
     (allowed) => d === allowed || d.endsWith(`.${allowed}`)
   );
 }
-
 function enforceSourceWhitelist(review: any) {
   const sources = Array.isArray(review.sources) ? review.sources : [];
   const filtered = sources.filter((s: any) => {
@@ -166,22 +66,105 @@ function enforceSourceWhitelist(review: any) {
   return { restricted, hasAny: filtered.length > 0 };
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Route types
-   ──────────────────────────────────────────────────────────── */
+/* -------------------------------------------
+   Evaluative confidence (Option B)
+   - compute dynamic penalties + positive signals
+------------------------------------------- */
+function isNuancedText(s: string) {
+  const t = (s || "").toLowerCase();
+  return (
+    t.includes("best practice") ||
+    t.includes("not strictly mandated") ||
+    t.includes("may be required") ||
+    t.includes("depends on") ||
+    t.includes("context-specific") ||
+    t.includes("generally required") ||
+    t.includes("recommended")
+  );
+}
+
+function evaluateConfidence(review: {
+  confidence: number;
+  summary?: string;
+  issues?: Array<{ description?: string }>;
+  sources?: Array<{ title?: string; domain?: string; url?: string }>;
+  fallback_offered?: "federal" | "none";
+}) {
+  const flags: string[] = [];
+  const sources = Array.isArray(review.sources) ? review.sources : [];
+
+  const thin = sources.length < 2;
+  if (thin) flags.push("thin_citations");
+
+  // Primary gov if single .gov/.ca.gov/.us
+  let isPrimaryGov = false;
+  if (sources.length === 1) {
+    const first = sources[0] as { url?: unknown; domain?: unknown };
+    const urlStr =
+      typeof first?.url === "string"
+        ? first.url
+        : typeof first?.domain === "string"
+        ? String(first.domain)
+        : "";
+    if (urlStr && /(\.gov(?:\.[a-z]{2})?|\.ca\.gov|\.us)(\/|$)/i.test(urlStr)) {
+      isPrimaryGov = true;
+    }
+  }
+
+  const hasStatuteLike = sources.some((s) =>
+    /\b(§|cfr|code|stat\.|lab\.|u\.s\.c\.)\b/i.test(
+      `${s?.title ?? ""} ${s?.domain ?? ""}`
+    )
+  );
+  if (!hasStatuteLike) flags.push("non_statute");
+
+  const nuanced =
+    isNuancedText(review.summary || "") ||
+    (Array.isArray(review.issues) &&
+      review.issues.some((i) => isNuancedText(i?.description || "")));
+  if (nuanced) flags.push("nuance");
+
+  if (review.fallback_offered === "federal") {
+    flags.push("fallback");
+  }
+
+  // Positive signals
+  if (!thin && hasStatuteLike) flags.push("authoritative_sources");
+  if (sources.length >= 3) flags.push("multiple_authoritative");
+
+  // Start from model’s reported confidence (clamped)
+  let c = Math.max(0, Math.min(1, review.confidence ?? 1));
+
+  // Apply dynamic adjustments (mild penalties/bonuses)
+  // Penalties
+  if (thin && !isPrimaryGov) c = Math.min(c, 0.78);
+  if (!hasStatuteLike) c = Math.min(c, 0.76);
+  if (nuanced) c = Math.min(c, 0.74);
+  if (review.fallback_offered === "federal") c = Math.min(c, 0.72);
+
+  // Bonuses (don’t exceed 0.90 total to keep humility)
+  if (!thin && hasStatuteLike) c = Math.min(0.90, c + 0.03);
+  if (sources.length >= 3) c = Math.min(0.90, c + 0.02);
+
+  return { confidence: c, flags };
+}
+
+/* -------------------------------------------
+   Types
+------------------------------------------- */
 type ReviewRequestBody = {
   text: string;
   filename?: string;
-  state: string;
-  document_type?: string; // prompt-time context only
+  state: string; // jurisdiction/state code
+  document_type?: string; // optional; passthrough context only
 };
 
-/* ─────────────────────────────────────────────────────────────
-   Handler
-   ──────────────────────────────────────────────────────────── */
+/* -------------------------------------------
+   Route
+------------------------------------------- */
 export async function POST(req: Request) {
   try {
-    // Health diag
+    // quick health check
     const url = new URL(req.url);
     if (url.searchParams.get("diag") === "1") {
       return NextResponse.json(
@@ -195,8 +178,63 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "OPENAI_API_KEY missing" }, { status: 500 });
     }
 
-    const { text, filename, state, document_type } =
-      (await req.json()) as ReviewRequestBody;
+    // Support multipart (file upload) AND JSON
+    let text: string | undefined;
+    let filename: string | undefined;
+    let state: string | undefined;
+    let document_type: string | undefined;
+
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      const file = form.get("file");
+
+      state = String(form.get("state") || "");
+      document_type = String(form.get("document_type") || "");
+      filename =
+        (file && typeof file === "object" && "name" in file)
+          ? (file as File).name
+          : String(form.get("filename") || "document");
+
+      if (!(file instanceof File)) {
+        return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+      }
+
+      try {
+        const { extractTextFromFile } = await import("@/lib/extractText");
+        const out = await extractTextFromFile(file);
+
+        // Allow short samples for TXT/HTML; keep higher bar for PDF/DOCX
+        const minLen = out.kind === "txt" || out.kind === "html" ? 5 : 20;
+        if (!out.text || out.text.trim().length < minLen) {
+          return NextResponse.json(
+            {
+              error: "Could not extract readable text from the file.",
+              hint:
+                out.kind === "pdf"
+                  ? "If this is a scanned or secured PDF, upload a DOCX/TXT/HTML version or run OCR first."
+                  : "Please provide a slightly longer sample or use DOCX/PDF.",
+              details: { kind: out.kind, filename },
+            },
+            { status: 400 }
+          );
+        }
+
+        text = out.text;
+      } catch (ex: any) {
+        console.error("[/api/review] extract error:", ex?.stack || ex);
+        return NextResponse.json(
+          { error: "Failed to extract text from uploaded file.", details: String(ex?.message ?? ex) },
+          { status: 400 }
+        );
+      }
+    } else {
+      const body = (await req.json()) as ReviewRequestBody;
+      text = body.text;
+      filename = body.filename || "document";
+      state = body.state;
+      document_type = body.document_type;
+    }
 
     if (!text || !state) {
       return NextResponse.json(
@@ -207,9 +245,8 @@ export async function POST(req: Request) {
 
     const s = String(state).toUpperCase();
     const file = filename || "document";
-
-    // System prompt (shows the curated whitelist to the model)
     const allowedTextBlock = ALLOWED_DOMAINS.map((d) => `- *.${d}`).join("\n");
+
     const systemPrompt = `
 You are "State Of HR GPT" performing an HR compliance document review.
 
@@ -238,10 +275,10 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
       jurisdiction: s,
       filename: file,
       document_text: text,
-      context: { document_type: document_type ?? null }, // prompt hint only
+      context: { document_type: document_type ?? null },
     };
 
-    // OpenAI call with strict schema
+    // ---- OpenAI call (strict JSON schema) ----
     const openaiResp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -255,10 +292,7 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
         response_format: { type: "json_schema", json_schema: ReviewSchemaOpenAI },
         messages: [
           { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: JSON.stringify(userPayload),
-          },
+          { role: "user", content: JSON.stringify(userPayload) },
         ],
       }),
     });
@@ -266,6 +300,7 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
     if (!openaiResp.ok) {
       const t = await openaiResp.text().catch(() => "");
       console.error("[/api/review] upstream error:", openaiResp.status, t);
+      auditEvent({ route: "review", ok: false, err: `Upstream: ${openaiResp.status}` });
       return NextResponse.json(
         { error: "Model error", details: t.slice(0, 2000) },
         { status: 502 }
@@ -277,7 +312,6 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
     };
     let raw = data?.choices?.[0]?.message?.content ?? "";
 
-    // Unfence ```json
     if (typeof raw === "string" && raw.startsWith("```")) {
       raw = raw.replace(/^```(?:json)?\n?/, "").replace(/```$/, "");
     }
@@ -291,67 +325,46 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
         { status: 502 }
       );
     }
-    
-    // Zod validation
+
+    // ---- Zod validation ----
     const result = ReviewSchemaZ.safeParse(parsed);
     if (!result.success) {
-      logEvent({
-        ts: new Date().toISOString(),
-        route: "review",
-        state,
-        docType: document_type ?? undefined,
-        jurisdiction: undefined,
-        confidence: undefined,
-        flags: undefined,
-        sources_restricted: undefined,
-        fallback_used: undefined,
-        fallback_offered: undefined,
-        ok: false,
-        err: "Schema validation failed",
-      });
       return NextResponse.json(
         { error: "Schema validation failed", issues: result.error.flatten() },
         { status: 422 }
       );
     }
 
-    
-
-    // Whitelist enforcement
+    // ---- Whitelist enforcement ----
     const review = { ...result.data };
     const { restricted, hasAny } = enforceSourceWhitelist(review);
 
-    // If nothing remains after whitelist, soft-fail with guidance
+    // If nothing remains after whitelist, return soft-fail guidance
     if (!hasAny) {
       const guidance =
         "I cannot verify this fully from official sources on the approved registry. " +
         "I can check federal baseline guidance or request clarification — would you like me to proceed?";
 
-      // Evaluative confidence + flags (even on soft-fail)
-      const evalResult = evaluateConfidenceReview({
-        confidence: review.confidence,
-        summary: review.summary,
-        issues: review.issues,
-        sources: review.sources,
-        legal_citations: review.legal_citations,
+      const evalResult = evaluateConfidence({
+        confidence: Number(review.confidence ?? 0) || 0,
+        summary: guidance,
+        issues: [],
+        sources: [],
         fallback_offered: "federal",
       });
 
-      logEvent({
-        ts: new Date().toISOString(),
+      auditEvent({
         route: "review",
+        ok: true,
+        model: MODEL,
         state,
         docType: document_type ?? undefined,
-        jurisdiction: undefined,
         confidence: evalResult.confidence,
         flags: evalResult.flags,
-        sources_restricted: undefined,
-        fallback_used: undefined,
         fallback_offered: "federal",
-        ok: true,
+        soft_fail: true,
+        sources_count: 0,
       });
-      
-      
 
       return NextResponse.json(
         {
@@ -361,17 +374,16 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
           fallback_offered: "federal",
           sources: [],
           confidence: evalResult.confidence,
-          // attach transparency (outside schema)
-          confidence_flags: evalResult.flags,
-        } as any,
+          confidence_flags: evalResult.flags, // transparency for UI
+        },
         { status: 200 }
       );
     }
 
-    // Ensure disclaimers exist
+    // Ensure disclaimer exists
     const hasDisclaimer =
       Array.isArray(review.disclaimers) &&
-      review.disclaimers.some((d: unknown) =>
+      review.disclaimers.some((d) =>
         String(d).toLowerCase().includes("not legal advice")
       );
     if (!hasDisclaimer) {
@@ -381,37 +393,46 @@ Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
       ];
     }
 
-    // Evaluative confidence + flags (normal path)
-    const { confidence, flags } = evaluateConfidenceReview(review);
-    review.confidence = confidence;
+    // Evaluate confidence + attach flags
+    const { confidence, flags } = evaluateConfidence({
+      confidence: Number(review.confidence ?? 0) || 0,
+      summary: review.summary,
+      issues: review.issues,
+      sources: review.sources,
+      fallback_offered: review.fallback_offered,
+    });
+
+    auditEvent({
+      route: "review",
+      ok: true,
+      model: MODEL,
+      state,
+      docType: document_type ?? undefined,
+      confidence,
+      flags,
+      fallback_offered: review.fallback_offered,
+      soft_fail: Boolean(review.soft_fail),
+      sources_count: Array.isArray(review.sources) ? review.sources.length : 0,
+    });
 
     return NextResponse.json(
-      {
-        ...review,
-        // attach transparency (outside schema)
-        confidence_flags: flags,
-      } as any,
+      { ...review, confidence, confidence_flags: flags },
       { status: 200 }
     );
   } catch (err: any) {
     console.error("[/api/review] error:", err?.stack || err);
-    logEvent({
-      ts: new Date().toISOString(),
-      route: "review",
-      state: undefined,
-      docType: undefined,
-      jurisdiction: undefined,
-      confidence: undefined,
-      flags: undefined,
-      sources_restricted: undefined,
-      fallback_used: undefined,
-      fallback_offered: undefined,
-      ok: false,
-      err: err?.message || "Review processing failed",
-    });
+    auditEvent({ route: "review", ok: false, err: String(err?.message ?? err) });
     return NextResponse.json(
-      { error: "Unexpected error", details: String(err?.message ?? err) },
+      { error: String(err?.message ?? "Unexpected error") },
       { status: 500 }
     );
   }
+}
+
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  if (url.searchParams.get("diag") === "1") {
+    return NextResponse.json({ ok: true, route: "review", ts: Date.now() }, { status: 200 });
+  }
+  return NextResponse.json({ error: "Use POST for this endpoint" }, { status: 405 });
 }

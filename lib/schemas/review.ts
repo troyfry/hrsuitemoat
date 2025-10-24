@@ -1,91 +1,66 @@
 // lib/schemas/review.ts
 import { z } from "zod";
 
-/**
- * Zod schema the server enforces AFTER OpenAI returns JSON.
- * Keep this aligned with the OpenAI json_schema below.
- */
+/** Zod used by your route */
+// Zod used by route.ts
 export const ReviewSchemaZ = z.object({
   schema_version: z.literal("ReviewSchema.v1"),
-  jurisdiction: z.string().min(2),
+  jurisdiction: z.string(),
   filename: z.string(),
-  summary: z.string().min(40),
-  overall_risk: z.enum(["low", "medium", "high"]),
-  issues: z
-    .array(
-      z.object({
-        section: z.string().min(1),
-        title: z.string().min(3),
-        description: z.string().min(20),
-        severity: z.enum(["low", "medium", "high"]),
-        related_statutes: z.array(z.string()),
-      })
-    )
-    .default([]),
-  legal_citations: z.array(z.string()).default([]),
-  sources: z
-    .array(
-      z.object({
-        name: z.string(),
-        url: z.string(), // don't enforce .url() here; OpenAI schema just uses string
-        citation: z.string(),
-        accessed_at: z.string(), // ISO-8601 encouraged by prompt; we accept string
-      })
-    )
-    .default([]),
-  disclaimers: z.array(z.string()).min(1),
-  confidence: z.number().min(0).max(1),
+  summary: z.string(),
+  overall_risk: z.enum(["low","medium","high"]),
+  issues: z.array(z.object({
+    section: z.string(),
+    title: z.string(),
+    description: z.string(),
+    severity: z.enum(["low","medium","high"]),
+    related_statutes: z.array(z.string()),
+  })),
+  legal_citations: z.array(z.string()),
+  sources: z.array(z.object({
+    name: z.string(),
+    url: z.string(),
+    citation: z.string(),
+    accessed_at: z.string(),
+  })),
+  disclaimers: z.array(z.string()),
+  confidence: z.number(),
   soft_fail: z.boolean(),
-  fallback_offered: z.enum(["federal", "none"]),
+  fallback_offered: z.enum(["federal","none"]),
+  confidence_flags: z.array(z.string()),
 });
+
+
 export type ReviewSchema = z.infer<typeof ReviewSchemaZ>;
 
-/**
- * OpenAI response_format JSON schema.
- * NOTE:
- *  - name MUST match ^[a-zA-Z0-9_-]+$
- *  - include EVERY key from properties in "required" arrays where needed
- *  - avoid nonstandard formats (e.g., "uri")
- */
+/** OpenAI response_format schema — must fully require every property */
 export const ReviewSchemaOpenAI = {
   name: "ReviewSchema_v1",
   schema: {
     type: "object",
     additionalProperties: false,
     properties: {
-      schema_version: { type: "string", const: "ReviewSchema.v1" },
-      jurisdiction: { type: "string", minLength: 2 },
+      schema_version: { const: "ReviewSchema.v1" },
+      jurisdiction: { type: "string" },
       filename: { type: "string" },
-      summary: { type: "string", minLength: 40 },
-      overall_risk: { type: "string", enum: ["low", "medium", "high"] },
+      summary: { type: "string" },
+      overall_risk: { enum: ["low","medium","high"] },
       issues: {
         type: "array",
         items: {
           type: "object",
           additionalProperties: false,
           properties: {
-            section: { type: "string", minLength: 1 },
-            title: { type: "string", minLength: 3 },
-            description: { type: "string", minLength: 20 },
-            severity: { type: "string", enum: ["low", "medium", "high"] },
-            related_statutes: {
-              type: "array",
-              items: { type: "string" },
-            },
+            section: { type: "string" },
+            title: { type: "string" },
+            description: { type: "string" },
+            severity: { enum: ["low","medium","high"] },
+            related_statutes: { type: "array", items: { type: "string" } }
           },
-          required: [
-            "section",
-            "title",
-            "description",
-            "severity",
-            "related_statutes",
-          ],
-        },
+          required: ["section","title","description","severity","related_statutes"]
+        }
       },
-      legal_citations: {
-        type: "array",
-        items: { type: "string" },
-      },
+      legal_citations: { type: "array", items: { type: "string" } },
       sources: {
         type: "array",
         items: {
@@ -93,36 +68,24 @@ export const ReviewSchemaOpenAI = {
           additionalProperties: false,
           properties: {
             name: { type: "string" },
-            url: { type: "string" }, // keep plain string; upstream "uri" format is not accepted
+            url: { type: "string" },
             citation: { type: "string" },
-            accessed_at: { type: "string" }, // ISO-8601 encouraged, not enforced here
+            accessed_at: { type: "string" }
           },
-          required: ["name", "url", "citation", "accessed_at"],
-        },
+          required: ["name","url","citation","accessed_at"]
+        }
       },
-      disclaimers: {
-        type: "array",
-        items: { type: "string" },
-        minItems: 1,
-      },
-      confidence: { type: "number", minimum: 0, maximum: 1 },
+      disclaimers: { type: "array", items: { type: "string" } },
+      confidence: { type: "number" },
       soft_fail: { type: "boolean" },
-      fallback_offered: { type: "string", enum: ["federal", "none"] },
+      fallback_offered: { enum: ["federal","none"] },
+      confidence_flags: { type: "array", items: { type: "string" } }
     },
     required: [
-      "schema_version",
-      "jurisdiction",
-      "filename",
-      "summary",
-      "overall_risk",
-      "issues",
-      "legal_citations",
-      "sources",
-      "disclaimers",
-      "confidence",
-      "soft_fail",
-      "fallback_offered",
-    ],
-  },
-  strict: true,
-};
+      "schema_version","jurisdiction","filename","summary","overall_risk",
+      "issues","legal_citations","sources","disclaimers",
+      "confidence","soft_fail","fallback_offered","confidence_flags"
+    ]
+  }
+} as const;
+
