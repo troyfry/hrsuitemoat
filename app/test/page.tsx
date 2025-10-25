@@ -402,17 +402,7 @@ export default function ReviewTestPage() {
         </section>
       )}
 
-      {/* Recommendations Button */}
-      <section className="rounded-2xl border border-slate-200 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold mb-3">Compliance Findings</h2>
-        <button
-          onClick={getRecommendations}
-          disabled={recommendationsLoading}
-          className="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm disabled:opacity-50 hover:bg-blue-700"
-        >
-          {recommendationsLoading ? "Getting Findings…" : "Compliance Findings"}
-        </button>
-      </section>
+
 
       {/* Error */}
       {revErr && (
