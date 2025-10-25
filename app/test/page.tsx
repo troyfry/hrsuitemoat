@@ -29,6 +29,11 @@ type ReviewResponse = {
   fallback_offered: "federal" | "none";
   // transparency (may be present)
   confidence_flags?: string[];
+  // tone assessment (may be present)
+  tone_assessment?: {
+    status: "compliant" | "needs_adjustment";
+    findings: string[];
+  };
 };
 
 export default function ReviewTestPage() {
@@ -188,6 +193,8 @@ export default function ReviewTestPage() {
               Powered by State-Of-HR GPT — Not legal advice.
             </div>
 
+            
+
             <h3 className="font-medium mt-5">Issues</h3>
                 <ul className="space-y-2">
                   {revRes.issues.map((i, idx) => (
@@ -205,6 +212,23 @@ export default function ReviewTestPage() {
                   ))}
                 </ul>
               </div>
+
+              {/* Tone Assessment */}
+              {revRes.tone_assessment && (
+                <div className="col-span-12 mt-6">
+                  <h2 className="text-lg font-semibold mb-2">Tone Assessment</h2>
+                  <p>
+                    <strong>Status:</strong> {revRes.tone_assessment.status === "compliant" 
+                      ? "✅ Compliant (HR-safe tone)" 
+                      : "⚠️ Needs Tone Adjustment"}
+                  </p>
+                  <ul className="list-disc ml-5 mt-1">
+                    {revRes.tone_assessment.findings.map((f: string, i: number) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div className="col-span-12 lg:col-span-5 space-y-3">
                 <h3 className="font-medium">Sources</h3>
