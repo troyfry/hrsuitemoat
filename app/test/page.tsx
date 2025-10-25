@@ -404,7 +404,7 @@ export default function ReviewTestPage() {
 
       {/* Recommendations Button */}
       <section className="rounded-2xl border border-slate-200 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold mb-3">Get Recommendations</h2>
+        <h2 className="text-lg font-semibold mb-3">Compliance Findings</h2>
         <button
           onClick={getRecommendations}
           disabled={recommendationsLoading}

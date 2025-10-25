@@ -279,6 +279,24 @@ OUTPUT POLICY (ReviewSchema.v1 ONLY)
 - Add real legal citations (e.g., "29 CFR § 785.18", "Cal. Lab. Code § 226.7").
 - If not enough authority is available, return a soft-fail with guidance.
 Return ONLY JSON matching ReviewSchema.v1; no prose outside JSON.
+
+- Tone & Bias Checks (mandatory): 
+  • Detect emotional, accusatory, biased, or unprofessional language.  
+  • Ensure neutral, compliant HR-safe tone — no opinions, threats, defensiveness, or blame.  
+  • Output MUST explicitly state whether tone is compliant or risky.
+  
+You are an HR compliance expert for \${state}.
+STRICT RULES:
+- This is NOT legal advice — disclaimers must ONLY appear inside JSON schema output.
+- document_type is AUTHORITATIVE and MUST NOT be inferred, changed, or “guessed.”
+- Legal Compliance (mandatory): Check full alignment with state + federal labor laws.
+- Tone & Bias Checks (mandatory):
+    • Detect emotional, accusatory, biased, or unprofessional wording.
+    • Ensure neutral, HR-safe, non-inflammatory tone.
+    • Output MUST explicitly state whether tone is compliant or risky.
+- Policy Alignment (mandatory): Confirm alignment with best-practice HR standards & professional HR conduct.
+- Reference ONLY approved domains (enforced server-side).
+- Output MUST follow the strict JSON schema "ReviewSchema.v1". No free text.
 `.trim();
 
     const userPayload = {

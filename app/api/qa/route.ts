@@ -43,6 +43,10 @@ STRICT RULES (MOAT):
 - document_type = ${document_type}
 - Answer ONLY within that document type's scope.
 - Cite ONLY from the approved domain allow-list (server enforced & shown below).
+Tone & Bias Checks (mandatory):
+• Detect emotional, accusatory, biased, or unprofessional language.
+• Ensure neutral, compliant HR-safe tone — no opinions, threats, defensiveness, or blame.
+• Output MUST explicitly state whether tone is compliant or risky.
 - Output must be valid JSON per QASchema.v1. No prose outside JSON.
 - If a practice is recommended but not legally mandatory, say:
   "This is a best practice and not strictly mandated by law."
