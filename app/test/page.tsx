@@ -410,7 +410,7 @@ export default function ReviewTestPage() {
           disabled={recommendationsLoading}
           className="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm disabled:opacity-50 hover:bg-blue-700"
         >
-          {recommendationsLoading ? "Getting Recommendations…" : "Get Recommendations"}
+          {recommendationsLoading ? "Getting Findings…" : "Compliance Findings"}
         </button>
       </section>
 
